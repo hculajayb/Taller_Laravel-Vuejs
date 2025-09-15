@@ -1,6 +1,6 @@
 <template>
   <v-data-table
-    :items="filtered"
+    :items="formattedUsers"
     :headers="headers"
     :loading="loading"
     class="elevation-1"
@@ -14,8 +14,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import api from '@/services/api'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
-type Usuario = { id:number; nombre:string; email:string; rol:'admin'|'usuario' }
+type Usuario = { id:number; nombre:string; email:string; rol:'admin'|'usuario'; created_at: string }
 
 const props = defineProps<{ searchTerm?: string }>()
 
@@ -26,6 +28,7 @@ const headers = [
   { title: 'Nombre', value: 'nombre' },
   { title: 'Email',  value: 'email' },
   { title: 'Rol',    value: 'rol' },
+  { title: 'Fecha creación', value: 'created_at' },
 ]
 
 // carga desde la API
@@ -50,6 +53,16 @@ const filtered = computed(() => {
     u.rol.toLowerCase().includes(q)
   )
 })
+
+// 📅 Aplicamos formato a la fecha con hora incluida
+const formattedUsers = computed(() =>
+  filtered.value.map(u => ({
+    ...u,
+    created_at: u.created_at 
+      ? format(new Date(u.created_at), 'dd/MM/yyyy HH:mm', { locale: es })
+      : ''
+  }))
+)
 
 // recargar si quieres al cambiar término (opcional)
 /* watch(() => props.searchTerm, () => { ... }) */
