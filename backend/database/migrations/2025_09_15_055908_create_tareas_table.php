@@ -14,7 +14,12 @@ return new class extends Migration
             $table->text('descripcion')->nullable();
             $table->enum('estado', ['pendiente', 'en_progreso', 'completada'])->default('pendiente');
             $table->date('fecha_vencimiento')->nullable();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            
+            // 🔑 FK hacia la tabla usuarios
+            $table->foreignId('usuario_id')
+                  ->constrained('usuarios')
+                  ->onDelete('cascade');
+            
             $table->timestamps();
         });
     }
