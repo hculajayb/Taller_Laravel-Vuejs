@@ -3,7 +3,10 @@
     <v-card class="pa-4">
       <div class="d-flex justify-space-between align-center mb-4">
         <div class="text-h6">Listado de Tareas</div>
+        <div class="d-flex ga-2">
+        <v-btn color="success" @click="downloadExcel">Descargar Formulario</v-btn>
         <v-btn color="primary" @click="goAddTarea">Nueva Tarea</v-btn>
+        </div>
       </div>
 
       <v-data-table
@@ -32,6 +35,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTareas } from '@/services/tareas'
+import api from '@/services/api'
 
 const tareas = ref<any[]>([])
 const loading = ref(false)
@@ -57,6 +61,24 @@ const fetchTareas = async () => {
 }
 
 const goAddTarea = () => router.push('/tareas/nueva')
+
+const downloadExcel = async () => {
+  try {
+    const response = await api.get('/tareas/exportPendientes', {
+      responseType: 'blob'
+    })
+
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'tareas_pendientes.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch (error) {
+    console.error('Error descargando Excel', error)
+  }
+}
 
 onMounted(fetchTareas)
 </script>
