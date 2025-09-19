@@ -6,9 +6,17 @@ use App\Models\Tarea;
 use App\Models\Usuario;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Exports\TareasPendientesExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TareaController extends Controller
 {
+    // Exportar tareas pendientes a Excel
+    public function exportPendientes()
+    {
+        return Excel::download(new TareasPendientesExport, 'tareas_pendientes.xlsx');
+    }
+
     //  Listar todas las tareas con usuario
     public function index()
     {

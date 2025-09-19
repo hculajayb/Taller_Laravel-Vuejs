@@ -36,6 +36,7 @@ Route::prefix('tareas')->group(function () {
     Route::get('/getTareas/{id}', [TareaController::class, 'show']);
     Route::put('/updateTareas/{id}', [TareaController::class, 'update']);
     Route::delete('/deleteTareas/{id}', [TareaController::class, 'destroy']);
+    Route::get('/exportPendientes', [TareaController::class, 'exportPendientes']);
 });
 
 // Rutas para autenticación
