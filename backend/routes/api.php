@@ -19,9 +19,10 @@ use App\Http\Controllers\Api\TareaController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-// Rutas para el controlador de usuarios, asignando nombres personalizados
 
-Route::prefix('usuarios')->group(function () {
+// Rutas para el controlador de usuarios, Protegidas con autenticación
+
+Route::middleware('auth:sanctum')->prefix('usuarios')->group(function () {
     Route::get('/listUsers', [UsuarioController::class, 'index']);
     Route::post('/addUser', [UsuarioController::class, 'store']);
     Route::get('/getUser/{id}', [UsuarioController::class, 'show']);
@@ -29,8 +30,8 @@ Route::prefix('usuarios')->group(function () {
     Route::delete('/deleteUser/{id}', [UsuarioController::class, 'destroy']);
 });
 
-// Rutas para el controlador de tareas
-Route::prefix('tareas')->group(function () {
+// Rutas para el controlador de tareas, Protegidas con autenticación
+Route::middleware('auth:sanctum')->prefix('tareas')->group(function () {
     Route::get('/listTareas', [TareaController::class, 'index']);
     Route::post('/addTareas', [TareaController::class, 'store']);
     Route::get('/getTareas/{id}', [TareaController::class, 'show']);
