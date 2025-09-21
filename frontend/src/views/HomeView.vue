@@ -25,6 +25,8 @@
             class="mb-4"
           />
 
+          <v-btn block color="primary" class="mb-3" @click="goToTareas">Ir a Tareas</v-btn>
+
           <v-btn block color="error" variant="tonal" @click="logout">
             Cerrar sesión
           </v-btn>
@@ -68,6 +70,8 @@ onMounted(() => {
 const isAdmin = computed(() => user.value?.rol === 'admin')
 
 const goAddUser = () => router.push('/usuarios/nuevo')
+
+const goToTareas = () => router.push('/tareas')
 
 const logout = () => {
   localStorage.removeItem('token')

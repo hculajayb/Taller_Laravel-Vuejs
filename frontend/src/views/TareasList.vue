@@ -3,6 +3,9 @@
     <v-card class="pa-4">
       <div class="d-flex justify-space-between align-center mb-4">
         <div class="text-h6">Listado de Tareas</div>
+        <div>
+          <v-btn color="primary" @click="goToUsuarios">Volver a Usuarios</v-btn>
+        </div>
         <div class="d-flex ga-2">
         <v-btn color="success" @click="downloadExcel">Descargar Formulario</v-btn>
         <v-btn color="primary" @click="goAddTarea">Nueva Tarea</v-btn>
@@ -78,6 +81,10 @@ const downloadExcel = async () => {
   } catch (error) {
     console.error('Error descargando Excel', error)
   }
+}
+
+const goToUsuarios = () => {
+  router.push({ name: 'usuarios' });
 }
 
 onMounted(fetchTareas)
