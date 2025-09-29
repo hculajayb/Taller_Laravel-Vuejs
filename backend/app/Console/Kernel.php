@@ -27,5 +27,5 @@ class Kernel extends ConsoleKernel
 
     protected $commands = [
         \App\Console\Commands\TenantsMigrate::class,
-];
+        \App\Console\Commands\TenantProvision::class,];
 }

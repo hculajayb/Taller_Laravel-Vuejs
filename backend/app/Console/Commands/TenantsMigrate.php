@@ -3,58 +3,45 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use App\Models\Tenant;
+use App\Support\TenantConnection;
 
 class TenantsMigrate extends Command
 {
-    protected $signature = 'tenants:migrate {--fresh} {--seed}';
-    protected $description = 'Ejecuta migraciones para todas las BD de tenants';
+    protected $signature   = 'tenants:migrate {--domain=}';
+    protected $description = 'Ejecuta migraciones de tenant (todas o sólo una con --domain=)';
 
     public function handle(): int
     {
-        $tenants = Tenant::all();
+        $domain = $this->option('domain');
+
+        $query = Tenant::query();
+        if ($domain) {
+            $query->where('domain', $domain);
+        }
+        $tenants = $query->get();
+
         if ($tenants->isEmpty()) {
-            $this->warn('No hay tenants.');
+            $this->warn('No hay tenants que migrar.');
             return self::SUCCESS;
         }
 
         foreach ($tenants as $tenant) {
-            $this->info("Migrando: {$tenant->domain}");
+            $this->line("Migrando tenant: <info>{$tenant->name}</info> ({$tenant->domain})");
 
-            Config::set('database.connections.tenant', [
-                'driver'   => 'mysql',
-                'host'     => $tenant->db_host,
-                'port'     => $tenant->db_port ?? 3306,
-                'database' => $tenant->db_name,
-                'username' => $tenant->db_user,
-                'password' => $tenant->db_pass,
-                'charset'  => 'utf8mb4',
-                'collation'=> 'utf8mb4_unicode_ci',
-                'prefix'   => '',
-                'strict'   => true,
-            ]);
-            DB::purge('tenant');
-            DB::reconnect('tenant');
+            // Conectar dinámicamente al tenant
+            TenantConnection::use($tenant);
 
-            $params = [
+            // Ejecutar migraciones usando Artisan::call (evitamos inyección de Migrator)
+            Artisan::call('migrate', [
                 '--database' => 'tenant',
                 '--path'     => 'database/migrations/tenant',
                 '--force'    => true,
-            ];
-            $this->call($this->option('fresh') ? 'migrate:fresh' : 'migrate', $params);
+            ]);
 
-            if ($this->option('seed')) {
-                Artisan::call('db:seed', [
-                    '--database' => 'tenant',
-                    '--force'    => true,
-                    // '--class' => \Database\Seeders\TenantDatabaseSeeder::class,
-                ]);
-            }
-
-            $this->info("OK: {$tenant->domain}");
+            $this->output->write(Artisan::output());
+            $this->info("✔ Migraciones aplicadas para {$tenant->domain}");
         }
 
         return self::SUCCESS;
