@@ -11,22 +11,34 @@ use App\Models\Usuario;
 class AuthController extends Controller
 {
     /**
-     * Registro de un nuevo usuario
+     * Registro de un nuevo usuario (emite token Bearer)
+     * POST /api/register  (si decides exponer la ruta)
      */
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'nombre'   => 'required|string|max:150',
-            'email'    => 'required|email|max:150|unique:usuarios,email',
-            'password' => 'required|string|min:6',
-            'rol'      => 'required|in:admin,usuario',
+            'nombre'   => ['required','string','max:150'],
+            'email'    => ['required','email','max:150','unique:usuarios,email'],
+            'password' => ['required','string','min:6'],
+            'rol'      => ['required','in:admin,usuario'],
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
-        $usuario = Usuario::create($validated);
+        $usuario = new Usuario([
+            'nombre'   => $validated['nombre'],
+            'email'    => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'rol'      => $validated['rol'],
+        ]);
 
-        // Generar token
-        $token = $usuario->createToken('api-token')->plainTextToken;
+        // Si tu modelo no fuerza la conexión, asegúrate de que use la del tenant
+        // $usuario->setConnection('tenant');
+        $usuario->save();
+
+        // Emite token personal (opcional: define abilities/scopes)
+        $token = $usuario->createToken('api-token', ['*'])->plainTextToken;
+
+        // Nunca devuelvas el hash de password
+        $usuario->makeHidden(['password']);
 
         return response()->json([
             'message' => 'Usuario registrado exitosamente',
@@ -36,42 +48,55 @@ class AuthController extends Controller
     }
 
     /**
-     * Login de usuario existente
+     * Login de usuario (emite token Bearer)
+     * POST /api/login
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
+        $data = $request->validate([
+            'email'    => ['required','email'],
+            'password' => ['required','string'],
         ]);
 
-        $usuario = Usuario::where('email', $request->email)->first();
+        $usuario = Usuario::where('email', $data['email'])->first();
 
-        if (! $usuario || ! Hash::check($request->password, $usuario->password)) {
+        if (! $usuario || ! Hash::check($data['password'], $usuario->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Credenciales inválidas.'],
             ]);
         }
 
-        // Generar token
-        $token = $usuario->createToken('api-token')->plainTextToken;
+        // Opcional: revocar tokens previos del usuario en este tenant
+        // $usuario->tokens()->delete();
+
+        // Emite nuevo token personal
+        $token = $usuario->createToken('api-token', ['*'])->plainTextToken;
+
+        $usuario->makeHidden(['password']);
 
         return response()->json([
             'message' => 'Login exitoso',
             'usuario' => $usuario,
             'token'   => $token,
-        ]);
+        ], 200);
     }
 
     /**
-     * Logout (revocar tokens)
+     * Logout (revocar token actual)
+     * POST /api/logout  (requiere Authorization: Bearer <token>)
      */
     public function logout(Request $request)
     {
-        $request->user()->tokens()->delete();
+        // Revoca solo el token usado en este request
+        if ($request->user()?->currentAccessToken()) {
+            $request->user()->currentAccessToken()->delete();
+        }
+
+        // Si quisieras revocar TODOS los tokens del usuario en este tenant:
+        // $request->user()->tokens()->delete();
 
         return response()->json([
-            'message' => 'Logout exitoso, tokens revocados'
-        ]);
+            'message' => 'Logout exitoso',
+        ], 204);
     }
 }

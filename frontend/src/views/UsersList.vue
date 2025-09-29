@@ -8,11 +8,21 @@
     <template #no-data>
       <div class="pa-6 text-center">No hay usuarios para mostrar.</div>
     </template>
+
+    <template #top>
+      <v-alert
+        v-if="errorMsg"
+        type="error"
+        variant="tonal"
+        class="ma-4"
+        :text="errorMsg"
+      />
+    </template>
   </v-data-table>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import api from '@/services/api'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -23,6 +33,7 @@ const props = defineProps<{ searchTerm?: string }>()
 
 const items = ref<Usuario[]>([])
 const loading = ref(false)
+const errorMsg = ref('')
 
 const headers = [
   { title: 'Nombre', value: 'nombre' },
@@ -34,9 +45,18 @@ const headers = [
 // carga desde la API
 const fetchUsers = async () => {
   loading.value = true
+  errorMsg.value = ''
   try {
     const { data } = await api.get<Usuario[]>('/usuarios/listUsers')
     items.value = data
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || 'No se pudo cargar la lista de usuarios.'
+    errorMsg.value = msg
+    // Si es 401, limpia token para que el guard te redirija en la siguiente navegación
+    if (e?.response?.status === 401) {
+      localStorage.removeItem('token')
+      sessionStorage.removeItem('tokenChecked')
+    }
   } finally {
     loading.value = false
   }
@@ -44,6 +64,7 @@ const fetchUsers = async () => {
 
 onMounted(fetchUsers)
 
+// filtro por término de búsqueda
 const filtered = computed(() => {
   const q = (props.searchTerm || '').toLowerCase().trim()
   if (!q) return items.value
@@ -54,16 +75,16 @@ const filtered = computed(() => {
   )
 })
 
-// 📅 Aplicamos formato a la fecha con hora incluida
+// Formateo de fecha
 const formattedUsers = computed(() =>
   filtered.value.map(u => ({
     ...u,
-    created_at: u.created_at 
+    created_at: u.created_at
       ? format(new Date(u.created_at), 'dd/MM/yyyy HH:mm', { locale: es })
       : ''
   }))
 )
 
-// recargar si quieres al cambiar término (opcional)
-/* watch(() => props.searchTerm, () => { ... }) */
+// (Opcional) refrescar cuando cambie el término si quieres reconsultar al backend
+// watch(() => props.searchTerm, fetchUsers)
 </script>

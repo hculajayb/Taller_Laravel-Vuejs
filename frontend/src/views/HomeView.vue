@@ -27,7 +27,7 @@
 
           <v-btn block color="primary" class="mb-3" @click="goToTareas">Ir a Tareas</v-btn>
 
-          <v-btn block color="error" variant="tonal" @click="logout">
+          <v-btn :loading="loggingOut" block color="error" variant="tonal" @click="logout">
             Cerrar sesión
           </v-btn>
 
@@ -54,6 +54,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/services/api'
 import UsersList from '@/views/UsersList.vue'
 
 type User = { id:number; nombre:string; email:string; rol:'admin'|'usuario' }
@@ -64,18 +65,28 @@ const search = ref('')
 const user = ref<User | null>(null)
 onMounted(() => {
   const raw = localStorage.getItem('user')
-  user.value = raw ? JSON.parse(raw) as User : null
+  user.value = raw ? (JSON.parse(raw) as User) : null
 })
 
 const isAdmin = computed(() => user.value?.rol === 'admin')
 
 const goAddUser = () => router.push('/usuarios/nuevo')
-
 const goToTareas = () => router.push('/tareas')
 
-const logout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-  router.push('/login')
+const loggingOut = ref(false)
+const logout = async () => {
+  if (loggingOut.value) return
+  loggingOut.value = true
+  try {
+    // Revoca el token actual en backend (si ya expiró/erró, ignoramos)
+    await api.post('/logout').catch(() => {})
+  } finally {
+    // Limpia estado local siempre
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    sessionStorage.removeItem('tokenChecked') // para que el guard vuelva a validar en esta pestaña
+    loggingOut.value = false
+    router.push('/login')
+  }
 }
 </script>
